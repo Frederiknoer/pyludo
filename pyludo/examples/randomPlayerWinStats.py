@@ -2,7 +2,12 @@ from pyludo import LudoGame, LudoPlayerRandom
 import random
 import time
 
-players = [LudoPlayerRandom() for _ in range(4)]
+import sys
+sys.path.append('pyludo/')
+from Qludo import Qludo
+
+players = [LudoPlayerRandom() for _ in range(3)]
+players.append(Qludo())
 for i, player in enumerate(players):
     player.id = i
 

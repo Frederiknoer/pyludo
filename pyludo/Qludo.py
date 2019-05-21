@@ -19,18 +19,20 @@ class Qludo:
         self.Qstate = 1
 
 
-        self.Q = np.zeros((6,8), dtype=int)
+        self.Q = np.zeros((7,9), dtype=int)
         if not self.TRAINING:
             self.loadQtable()
 
         self.R = np.array([
-                            [ 150, -1, -1,   -1,   -1, -1, -1,  -1 ], #HOME
-                            [ -1, 120, 175,  250,  350, 1, 270, 15 ], #@ SAFE GLOBE
-                            [ -1, 120, 175,  250,  350, 1, 270, 15 ], #@ RISKY GLOBE
-                            [ -1, -1,  -1,   250,  -1, -1,  -1, 15 ], #IN GOAL LINE
-                            [ -1, -1,  -1,   -1,   -1, -1,  -1, -1 ], #IN GOAL
-                            [ -1, 120, 175,  250,  350, 1, 270, 15 ]  #OTHER
+                            [ 150, -1,  -1,   -1,   -1, -1,  -1,  -1, -1 ], #HOME
+                            [ -1, 140, 175,  250,  200,  1, 170, 220, 15 ], #@ SAFE GLOBE
+                            [ -1, 140, 175,  250,  200,  1, 170, 220, 15 ], #@ RISKY GLOBE
+                            [ -1,  70, 175,  250,  100,  1, 100,  50,  1 ], #@ DOUBLE PLAYER SAFE HOME
+                            [ -1,  -1,  -1,  250,   -1, -1,  -1,  -1, 15 ], #IN GOAL LINE
+                            [ -1,  -1,  -1,   -1,   -1, -1,  -1, -1,  -1 ], #IN GOAL
+                            [ -1, 140, 175,  250,  200,  1, 170, 220, 15 ]  #OTHER
                             ])
+
         self.Gamma = 0.5
         self.Action = -1
 
@@ -48,12 +50,13 @@ class Qludo:
     def saveQtable(self):
         with open('Qtablefile.csv', mode='w') as q_file:
             q_writer = csv.writer(q_file, delimiter=',')
-            for i in range(6):
+            for i in range(7):
                 q_writer.writerow(self.Q[i][:])
                 #print(self.Q[i][:])
 
     def updateQTable(self, state, action, next_state):
-        self.Q[state][action] = self.R[state][action] + self.Gamma * max(self.Q[next_state][:])
+        #print("ns: ", next_state)
+        self.Q[state][action] = (self.R[state][action]) + (self.Gamma * max(self.Q[next_state][:]))
 
     def is_safe_globe_pos(self, pos):
         if pos % 13 == 1:
@@ -76,45 +79,45 @@ class Qludo:
     def checkPossibleActions(self, diceRoll, playerPositions, rel_next_states):
         self.Qactions = [None]*4
         opponents = []
-        #print("Positions: ", playerPositions[self.playerId])
 
         for i in range(1,4):
             for j in range(4):
                 opponents.append(playerPositions[i][j])
 
-        for i, pos in enumerate(playerPositions[self.playerId]):
-            #CHECK IF ANY HOMED TOKEN CAN GO OUT:
-            if pos == -1 and diceRoll == 6 and not any(x == 1 for x in playerPositions[self.playerId]):
-                self.Qactions[i] = 0
-            elif pos != -1 and pos < 52:
-                #CHECK IF ANY ANY OPPONENT CAN BE KILLED:
-                if any(x == pos+diceRoll for x in opponents) and not self.is_risky_globe_pos(pos+diceRoll) and not self.is_safe_globe_pos(pos+diceRoll):
-                    self.Qactions[i] = 1
-                #CHECK IF ANY TOKEN CAN BE MOVED IN TO GOAL LINE
-                elif (pos+diceRoll >= self.goalLineStartPos) and (pos+diceRoll < self.goalLineStartPos+5): ##THIS IS WRONG!
-                    self.Qactions[i] = 2
-                #CHECK IF ANY TOKEN CAN ENTER GOAL:
-                elif (pos+diceRoll == 57): #THIS IS WRONG!
-                    self.Qactions[i] = 3
-                #CHECK IF ANY TOKEN CAN BE PLACED ON A SAFE GLOBE
-                elif self.is_safe_globe_pos(pos+diceRoll):
-                    self.Qactions[i] = 4
-                #CHECK IF ANY TOKEN CAN BE PLACED ON A RISKY GLOBE
-                elif self.is_risky_globe_pos(pos+diceRoll):
-                    self.Qactions[i] = 5
-                #CHECK IF TOKEN CAN BE MOVED TO A STAR
-                elif self.is_star(pos+diceRoll):
-                    self.Qactions[i] = 6
-                #CHECK IF ANY CAN DO ANY MOVE:
-                elif pos != -1 and pos+diceRoll < 99:
-                    self.Qactions[i] = 7
-            elif pos > 51 and pos < 57:
-                #CHECK IF ANY TOKEN CAN ENTER GOAL:
-                if (pos+diceRoll == 57): #THIS IS WRONG
-                    self.Qactions[i] = 3
-                #CHECK IF ANY CAN DO ANY MOVE:
-                else:
-                    self.Qactions[i] = 7
+        for next_state in rel_next_states:
+            if next_state is not False:
+                print("next state: ", next_state[0])
+                for i, n_state in enumerate(next_state[0]):
+                    if n_state == -1 or playerPositions[0][i] == 99:
+                        continue
+                    #CHECK IF ANY HOMED TOKEN CAN GO OUT:
+                    if n_state == 1 and playerPositions[0][i] == -1:
+                        self.Qactions[i] = 0
+                    #CHECK IF ANY ANY OPPONENT CAN BE KILLED:
+                    elif any(x == n_state for x in opponents) and not self.is_risky_globe_pos(n_state) and not self.is_safe_globe_pos(n_state) and playerPositions[0][i] < 52 and not any(x == 99 for x in opponents):
+                        self.Qactions[i] = 1
+                    #CHECK IF ANY TOKEN CAN ENTER GOALLINE
+                    elif n_state >= 52 and n_state < 57 and playerPositions[0][i] < 52:
+                        self.Qactions[i] = 2
+                    #CHECK IF ANY TOKEN CAN ENTER GOAL
+                    elif n_state == 99:
+                        self.Qactions[i] = 3
+                    #CHECK IF ANY TOKEN CAN BE PLACED ON A SAFE GLOBE
+                    elif self.is_safe_globe_pos(n_state):
+                        self.Qactions[i] = 4
+                    #CHECK IF ANY TOKEN CAN BE PLACED ON A RISKY GLOBE
+                    elif self.is_risky_globe_pos(n_state):
+                        self.Qactions[i] = 5
+                    #CHECK IF TOKEN CAN BE MOVED TO A STAR
+                    elif self.is_star(n_state):
+                        self.Qactions[i] = 6
+                    #CHECK IS TWO TOKENS CAN MAKE A SAFE PLACE
+                    elif not self.is_risky_globe_pos(n_state) and not self.is_safe_globe_pos(n_state):
+                        for j, nx_state in enumerate(next_state[0]):
+                            if nx_state == n_state and j != i:
+                                self.Qactions[i] = 7
+                            else:
+                                self.Qactions[i] = 8
 
 
     def getActullyState(self, playerPos):
@@ -126,39 +129,46 @@ class Qludo:
                 self.Qstates[i] = 1
             elif self.is_risky_globe_pos(pos):
                 self.Qstates[i] = 2
-            elif pos > 51 and pos < 57:
-                self.Qstates[i] = 3
-            elif pos == 99:
-                self.Qstates[i] = 4
-            else:
-                self.Qstates[i] = 5
+            elif not self.is_risky_globe_pos(pos) and not self.is_safe_globe_pos(pos):
+                for j, xpos in enumerate(playerPos):
+                    if xpos == pos and j != i and pos != 99:
+                        self.Qstates[i] = 3
+                    elif pos > 51 and pos < 57:
+                        self.Qstates[i] = 4
+                    elif pos == 99:
+                        self.Qstates[i] = 5
+                    else:
+                        self.Qstates[i] = 6
 
-    def getState(self, pos):
-        state = -1
-        if pos == -1:
-            state = 0
-        elif self.is_safe_globe_pos(pos):
-            state = 1
-        elif self.is_risky_globe_pos(pos):
-            state = 2
-        elif pos > 51 and pos < 57:
-            state = 3
-        elif pos == 99:
-            state = 4
-        else:
-            state = 5
+    def getNextState(self, rel_next_states):
+        for next_state in rel_next_states:
+            if next_state is not False:
+                for i, n_state in enumerate(next_state[0]):
+                    if n_state == -1:
+                        state = 0
+                    elif self.is_safe_globe_pos(n_state):
+                        state = 1
+                    elif self.is_risky_globe_pos(n_state):
+                        state = 2
+                    elif  not self.is_risky_globe_pos(n_state) and not self.is_safe_globe_pos(n_state):
+                        for j, nx_state in enumerate(next_state[0]):
+                            if nx_state == n_state and j != i and n_state != 99:
+                                state = 3
+                            elif n_state > 51 and n_state < 57:
+                                state = 4
+                            elif n_state == 99:
+                                state = 5
+                            else:
+                                state = 6
         return state
 
     def makeDecision(self, diceRoll):
-        #print ("DiceRoll: ",diceRoll)
-        #print("Qstates: ",self.Qstates)
-        #print("Qactions ",self.Qactions)
         IdxList = []
         self.Action = -1
         actionsList = []
 
         for i in range(4):
-            if self.Qactions[i] != None and self.Qactions[i] != -1:
+            if self.Qactions[i] != None:
                 IdxList.append(i)
 
         if len(IdxList) > 0:
@@ -166,48 +176,58 @@ class Qludo:
                 actionsList.append(self.Qactions[IdxList[i]])
             self.Action = IdxList[random.randint(0,len(IdxList)-1)]
 
-        #print("Action: ", self.Action)
-
-
     def makeQtableDecision(self):
         max_value = 0
         idx = -1
 
         for i in range(4):
-            #print("Qstate", self.Qstates[i])
             if self.Qactions[i] != None:
+                print("I: ", i , "  Q-value: ", self.Q[self.Qstates[i]][self.Qactions[i]])
                 if self.Q[self.Qstates[i]][self.Qactions[i]] > max_value:
                     max_value = self.Q[self.Qstates[i]][self.Qactions[i]]
                     idx = i
 
-        #print("Token: ", idx)
         self.Action = idx
 
     def play(self, relative_state, diceRoll, rel_next_states):
+        for next_state in rel_next_states:
+            if next_state is not False:
+                if sum(next_state[0]) == -4:
+                    return random.choice(np.argwhere(rel_next_states != False))
+
+        print("\n")
         if self.TRAINING:
+            print("TRAINING:")
             self.getActullyState(relative_state[0])
             self.checkPossibleActions(diceRoll, relative_state, rel_next_states)
             self.makeDecision(diceRoll)
-            #print("Current state: ", relative_state[0], "\n")
-            #print("Chosen state: ", )
-            nextState = self.getState(rel_next_states[self.Action][0][self.Action])
-            #print("Token: ", self.Action)
-            if self.Action != -1:
-                #print("State: ", self.Qstates[self.Action], "  Action: ", self.Qactions[self.Action])
-                self.updateQTable(self.Qstates[self.Action], self.Qactions[self.Action], nextState)
-                #print("\n", self.Q)
-            else:
-                print('T: DiceRoll', diceRoll, '  token states: ', relative_state[0], '  Action: ', self.Action)
-                print('State: ', self.Qstates, '  Action: ', self.Qactions)
+
+            nextState = self.getNextState(rel_next_states)
+            self.updateQTable(self.Qstates[self.Action], self.Qactions[self.Action], nextState)
+
+            print("diceRoll: ", diceRoll)
+            print("relative_state: ", relative_state[0])
+            print("Qstates: ", self.Qstates)
+            print("Qactions:", self.Qactions)
+            print("Action: ", self.Action)
+
+
+
             return self.Action
+
         else:
-            #print("DiceRoll: ", diceRoll)
+            print("USING Q TABLE:")
             self.getActullyState(relative_state[0])
             self.checkPossibleActions(diceRoll, relative_state, rel_next_states)
+
+            print("diceRoll: ", diceRoll)
+            print("relative_state: ", relative_state[0])
+            print("Qstates: ", self.Qstates)
+            print("Qactions:", self.Qactions)
+
             self.makeQtableDecision()
-            if self.Action == -1:
-                print('NT: DiceRoll', diceRoll, '  token states: ', relative_state[0], '  Action: ', self.Action)
-                print('State: ', self.Qstates, '  Action: ', self.Qactions)
+            print("Action: ", self.Action)
+
             return self.Action
 
     def save_stats(self, is_training, games_trained, games_played, wins):
