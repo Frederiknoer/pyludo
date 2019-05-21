@@ -33,7 +33,7 @@ t = 5
 q_gms_played = 0
 t_gms_played = 0
 
-myplayer.TRAINING = True
+myplayer.TRAINING = False
 print('Ludo started...')
 for j in range(m):
     for player in players:

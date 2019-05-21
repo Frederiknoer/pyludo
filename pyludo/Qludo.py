@@ -9,7 +9,7 @@ import csv
 class Qludo:
     def __init__(self):
         print("QLUDO OBJECT CREATED")
-        self.TRAINING = True
+        self.TRAINING = False
 
         self.playerId = 0
         self.name = 'qludo'
@@ -19,18 +19,19 @@ class Qludo:
         self.Qstate = 1
 
 
-        self.Q = np.zeros((7,9), dtype=int)
-        if not self.TRAINING:
-            self.loadQtable()
+        self.Q = np.zeros((7,10), dtype=int)
+        if os.path.isfile('Qtablefile.csv'):
+            if not self.TRAINING:
+                self.loadQtable()
 
         self.R = np.array([
-                            [ 150, -1,  -1,   -1,   -1, -1,  -1,  -1, -1 ], #HOME
-                            [ -1, 140, 175,  250,  200,  1, 170, 220, 15 ], #@ SAFE GLOBE
-                            [ -1, 140, 175,  250,  200,  1, 170, 220, 15 ], #@ RISKY GLOBE
-                            [ -1,  70, 175,  250,  100,  1, 100,  50,  1 ], #@ DOUBLE PLAYER SAFE HOME
-                            [ -1,  -1,  -1,  250,   -1, -1,  -1,  -1, 15 ], #IN GOAL LINE
-                            [ -1,  -1,  -1,   -1,   -1, -1,  -1, -1,  -1 ], #IN GOAL
-                            [ -1, 140, 175,  250,  200,  1, 170, 220, 15 ]  #OTHER
+                            [ 150, -1,  -1,   -1,   -1, -1,  -1,  -1, -200, -1 ], #HOME
+                            [ -1, 140, 175,  250,  200,  1, 170, 220, -200, 15 ], #@ SAFE GLOBE
+                            [ -1, 140, 175,  250,  200,  1, 170, 220, -200, 15 ], #@ RISKY GLOBE
+                            [ -1,  70, 175,  250,  100,  1, 100,  50, -200,  1 ], #@ DOUBLE PLAYER SAFE HOME
+                            [ -1,  -1,  -1,  250,   -1, -1,  -1,  -1, -200, 15 ], #IN GOAL LINE
+                            [ -1,  -1,  -1,   -1,   -1, -1,  -1,  -1, -200, -1 ], #IN GOAL
+                            [ -1, 140, 175,  250,  200,  1, 170, 220, -200, 15 ]  #OTHER
                             ])
 
         self.Gamma = 0.5
@@ -86,8 +87,12 @@ class Qludo:
 
         for next_state in rel_next_states:
             if next_state is not False:
-                print("next state: ", next_state[0])
+                #print("next state: ", next_state[0])
                 for i, n_state in enumerate(next_state[0]):
+                    #CHECK IF ANY TOKEN IS FORCED TO DO SUICIDE
+                    if n_state == -1 and playerPositions[0][i] != -1:
+                        self.Qactions[i] = 8
+                    #CONTINUE IF NEXT STATE IS IN HOME OR CURRENT STATE IS IN GOAL
                     if n_state == -1 or playerPositions[0][i] == 99:
                         continue
                     #CHECK IF ANY HOMED TOKEN CAN GO OUT:
@@ -117,7 +122,7 @@ class Qludo:
                             if nx_state == n_state and j != i:
                                 self.Qactions[i] = 7
                             else:
-                                self.Qactions[i] = 8
+                                self.Qactions[i] = 9
 
 
     def getActullyState(self, playerPos):
@@ -177,12 +182,12 @@ class Qludo:
             self.Action = IdxList[random.randint(0,len(IdxList)-1)]
 
     def makeQtableDecision(self):
-        max_value = 0
+        max_value = -999
         idx = -1
 
         for i in range(4):
             if self.Qactions[i] != None:
-                print("I: ", i , "  Q-value: ", self.Q[self.Qstates[i]][self.Qactions[i]])
+                #print("I: ", i , "  Q-value: ", self.Q[self.Qstates[i]][self.Qactions[i]])
                 if self.Q[self.Qstates[i]][self.Qactions[i]] > max_value:
                     max_value = self.Q[self.Qstates[i]][self.Qactions[i]]
                     idx = i
@@ -190,14 +195,9 @@ class Qludo:
         self.Action = idx
 
     def play(self, relative_state, diceRoll, rel_next_states):
-        for next_state in rel_next_states:
-            if next_state is not False:
-                if sum(next_state[0]) == -4:
-                    return random.choice(np.argwhere(rel_next_states != False))
-
-        print("\n")
+        #print("\n")
         if self.TRAINING:
-            print("TRAINING:")
+            #print("TRAINING:")
             self.getActullyState(relative_state[0])
             self.checkPossibleActions(diceRoll, relative_state, rel_next_states)
             self.makeDecision(diceRoll)
@@ -205,36 +205,34 @@ class Qludo:
             nextState = self.getNextState(rel_next_states)
             self.updateQTable(self.Qstates[self.Action], self.Qactions[self.Action], nextState)
 
-            print("diceRoll: ", diceRoll)
-            print("relative_state: ", relative_state[0])
-            print("Qstates: ", self.Qstates)
-            print("Qactions:", self.Qactions)
-            print("Action: ", self.Action)
-
-
+            #print("diceRoll: ", diceRoll)
+            #print("relative_state: ", relative_state[0])
+            #print("Qstates: ", self.Qstates)
+            #print("Qactions:", self.Qactions)
+            #print("Action: ", self.Action)
 
             return self.Action
 
         else:
-            print("USING Q TABLE:")
+            #print("USING Q TABLE:")
             self.getActullyState(relative_state[0])
             self.checkPossibleActions(diceRoll, relative_state, rel_next_states)
 
-            print("diceRoll: ", diceRoll)
-            print("relative_state: ", relative_state[0])
-            print("Qstates: ", self.Qstates)
-            print("Qactions:", self.Qactions)
+            #print("diceRoll: ", diceRoll)
+            #print("relative_state: ", relative_state[0])
+            #print("Qstates: ", self.Qstates)
+            #print("Qactions:", self.Qactions)
 
             self.makeQtableDecision()
-            print("Action: ", self.Action)
+            #print("Action: ", self.Action)
 
             return self.Action
 
     def save_stats(self, is_training, games_trained, games_played, wins):
-        if is_training:
+        if not is_training:
             with open('ludoStats_usingQtable.csv', mode='a') as stat_file1:
                 stat_writer1 = csv.writer(stat_file1, delimiter=',')
-                stat_writer1.writerow([games_trained, games_played, wins])
+                stat_writer1.writerow([games_trained, (wins/games_played)*100])
         else:
             with open('ludoStats_training.csv', mode='a') as stat_file2:
                 stat_writer2 = csv.writer(stat_file2, delimiter=',')
