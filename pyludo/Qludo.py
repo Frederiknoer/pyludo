@@ -9,7 +9,6 @@ import csv
 class Qludo:
     def __init__(self):
         print("QLUDO OBJECT CREATED")
-        self.TRAINING = False
 
         self.playerId = 0
         self.name = 'qludo'
@@ -21,8 +20,7 @@ class Qludo:
 
         self.Q = np.zeros((7,10), dtype=int)
         if os.path.isfile('Qtablefile.csv'):
-            if not self.TRAINING:
-                self.loadQtable()
+            self.loadQtable()
 
         self.R = np.array([
                             [ 150, -1,  -1,   -1,   -1, -1,  -1,  -1, -200, -1 ], #HOME
@@ -34,8 +32,11 @@ class Qludo:
                             [ -1, 140, 175,  250,  200,  1, 170, 220, -200, 15 ]  #OTHER
                             ])
 
-        self.Gamma = 0.5
         self.Action = -1
+        self.epsilon = 1
+
+        self.learning_rate = 0.01
+        self.discount_rate = 0.005
 
         self.Qactions = [None]*4
         self.Qstates = [None]*4
@@ -46,18 +47,15 @@ class Qludo:
             linecount = 0
             for i, row in enumerate(csv_reader):
                 self.Q[i][:] = row
-                #print (row)
 
     def saveQtable(self):
         with open('Qtablefile.csv', mode='w') as q_file:
             q_writer = csv.writer(q_file, delimiter=',')
             for i in range(7):
                 q_writer.writerow(self.Q[i][:])
-                #print(self.Q[i][:])
 
     def updateQTable(self, state, action, next_state):
-        #print("ns: ", next_state)
-        self.Q[state][action] = (self.R[state][action]) + (self.Gamma * max(self.Q[next_state][:]))
+        self.Q[state][action] = self.Q[state][action] + self.learning_rate * (self.R[state][action] + (self.discount_rate * max(self.Q[next_state][:])))
 
     def is_safe_globe_pos(self, pos):
         if pos % 13 == 1:
@@ -167,7 +165,7 @@ class Qludo:
                                 state = 6
         return state
 
-    def makeDecision(self, diceRoll):
+    def makeDecision(self):
         IdxList = []
         self.Action = -1
         actionsList = []
@@ -194,40 +192,35 @@ class Qludo:
 
         self.Action = idx
 
-    def play(self, relative_state, diceRoll, rel_next_states):
-        #print("\n")
-        if self.TRAINING:
-            #print("TRAINING:")
-            self.getActullyState(relative_state[0])
-            self.checkPossibleActions(diceRoll, relative_state, rel_next_states)
-            self.makeDecision(diceRoll)
-
+    def chooseAction(self, rel_next_states):
+        if self.epsilon == 0 or (random.randint(1,1000) / 1000) > self.epsilon:
+            self.makeQtableDecision()
+        else:
+            self.makeDecision()
             nextState = self.getNextState(rel_next_states)
             self.updateQTable(self.Qstates[self.Action], self.Qactions[self.Action], nextState)
+        pass
 
-            #print("diceRoll: ", diceRoll)
-            #print("relative_state: ", relative_state[0])
-            #print("Qstates: ", self.Qstates)
-            #print("Qactions:", self.Qactions)
-            #print("Action: ", self.Action)
+    def play(self, relative_state, diceRoll, rel_next_states):
+        #print("\n")
+        self.getActullyState(relative_state[0])
+        self.checkPossibleActions(diceRoll, relative_state, rel_next_states)
+        self.chooseAction(rel_next_states)
 
-            return self.Action
+        #print("diceRoll: ", diceRoll)
+        #print("relative_state: ", relative_state[0])
+        #print("Qstates: ", self.Qstates)
+        #print("Qactions:", self.Qactions)
+        #print("Action: ", self.Action)
 
-        else:
-            #print("USING Q TABLE:")
-            self.getActullyState(relative_state[0])
-            self.checkPossibleActions(diceRoll, relative_state, rel_next_states)
+        return self.Action
 
-            #print("diceRoll: ", diceRoll)
-            #print("relative_state: ", relative_state[0])
-            #print("Qstates: ", self.Qstates)
-            #print("Qactions:", self.Qactions)
+    def save_q_stats(self, filename, games_played, wins):
+        with open(filename, mode='a') as stat_file:
+            stat_writer = csv.writer(stat_file, delimiter=';')
+            stat_writer.writerow([games_played, (wins/games_played)*100, self.epsilon])
 
-            self.makeQtableDecision()
-            #print("Action: ", self.Action)
-
-            return self.Action
-
+'''
     def save_stats(self, is_training, games_trained, games_played, wins):
         if not is_training:
             with open('ludoStats_usingQtable.csv', mode='a') as stat_file1:
@@ -237,7 +230,7 @@ class Qludo:
             with open('ludoStats_training.csv', mode='a') as stat_file2:
                 stat_writer2 = csv.writer(stat_file2, delimiter=',')
                 stat_writer2.writerow([games_played, wins])
-
+'''
 
 if __name__ == '__main__':
     print("Running Q Ludo")
