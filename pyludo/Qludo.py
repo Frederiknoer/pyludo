@@ -19,8 +19,7 @@ class Qludo:
 
 
         self.Q = np.zeros((7,10), dtype=int)
-        if os.path.isfile('Qtablefile.csv'):
-            self.loadQtable()
+
 
         self.R = np.array([
                             [ 150, -1,  -1,   -1,   -1, -1,  -1,  -1, -200, -1 ], #HOME
@@ -48,14 +47,14 @@ class Qludo:
             for i, row in enumerate(csv_reader):
                 self.Q[i][:] = row
 
-    def saveQtable(self):
-        with open('Qtablefile.csv', mode='w') as q_file:
+    def saveQtable(self, filename):
+        with open(filename, mode='w') as q_file:
             q_writer = csv.writer(q_file, delimiter=',')
             for i in range(7):
                 q_writer.writerow(self.Q[i][:])
 
     def updateQTable(self, state, action, next_state):
-        self.Q[state][action] = self.Q[state][action] + self.learning_rate * (self.R[state][action] + (self.discount_rate * max(self.Q[next_state][:])))
+        self.Q[state][action] = self.Q[state][action] + self.learning_rate * (self.R[state][action] + self.discount_rate * max(self.Q[next_state][:] - self.Q[state][action]))
 
     def is_safe_globe_pos(self, pos):
         if pos % 13 == 1:

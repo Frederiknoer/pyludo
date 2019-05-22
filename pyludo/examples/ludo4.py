@@ -44,6 +44,6 @@ for j in range(m):
     myplayer.discount_rate -= 0.0005
 
 
-myplayer.saveQtable()
+myplayer.saveQtable('Qtablefile4.csv')
 
 print('win distribution:', scores)

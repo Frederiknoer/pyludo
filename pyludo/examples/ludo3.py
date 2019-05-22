@@ -40,6 +40,6 @@ for j in range(m):
     myplayer.save_q_stats(filename='ludoStats3.csv', games_played=((j+1)*n), wins=(float(scores['qludo'])))
     if myplayer.epsilon != 0:
         myplayer.epsilon -= 0.01
-myplayer.saveQtable()
+myplayer.saveQtable('Qtablefile2.csv')
 
 print('win distribution:', scores)
