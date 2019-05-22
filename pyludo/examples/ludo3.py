@@ -40,7 +40,7 @@ for j in range(m):
     myplayer.save_q_stats(filename='ludoStats3.csv', games_played=((j+1)*n), wins=(float(scores['qludo'])))
     if myplayer.epsilon > 0.01:
         myplayer.epsilon -= 0.01
-    if myplayer.dicount_rate > 0.01:
+    if myplayer.discount_rate > 0.01:
         myplayer.discount_rate -= 0.0005
 myplayer.saveQtable('Qtablefile2.csv')
 

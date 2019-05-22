@@ -18,7 +18,7 @@ players = [
     #LudoPlayerDefensive(),
 ]
 
-myplayer.learning_rate = 0.02
+myplayer.learning_rate = 0.1
 myplayer.discount_rate = 0.01
 
 scores = {}
@@ -37,15 +37,13 @@ for j in range(m):
         print('Game ', i+j*n, ' done')
         #print(myplayer.Q)
 
-    myplayer.save_q_stats(filename='ludoStats4.csv', games_played=((j+1)*n), wins=(float(scores['qludo'])))
+    myplayer.save_q_stats(filename='ludoStats7.csv', games_played=((j+1)*n), wins=(float(scores['qludo'])))
     if myplayer.epsilon > 0.01:
-        myplayer.epsilon -= 0.01
+        myplayer.epsilon -= 0.006
     if myplayer.learning_rate > 0.01:
-        myplayer.learning_rate -= 0.0005
+        myplayer.learning_rate -= 0.00025
     if myplayer.discount_rate > 0.01:
-        myplayer.discount_rate -= 0.0005
-
-
-myplayer.saveQtable('Qtablefile4.csv')
+        myplayer.learning_rate -= 0.00025
+myplayer.saveQtable('Qtablefile7.csv')
 
 print('win distribution:', scores)
