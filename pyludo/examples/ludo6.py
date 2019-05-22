@@ -26,7 +26,7 @@ for player in players:
     scores[player.name] = 0
 
 n = 200
-m = 1000
+m = 500
 
 for j in range(m):
     for i in range(n):
@@ -38,7 +38,7 @@ for j in range(m):
         #print(myplayer.Q)
 
     myplayer.save_q_stats(filename='ludoStats6.csv', games_played=((j+1)*n), wins=(float(scores['qludo'])))
-    if myplayer.epsilon != 0:
+    if myplayer.epsilon > 0.01:
         myplayer.epsilon -= 0.01
 myplayer.saveQtable('Qtablefile6.csv')
 
