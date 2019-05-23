@@ -217,7 +217,7 @@ class Qludo:
     def save_q_stats(self, filename, games_played, wins):
         with open(filename, mode='a') as stat_file:
             stat_writer = csv.writer(stat_file, delimiter=';')
-            stat_writer.writerow([games_played, (wins/games_played)*100, (self.epsilon*100), (self.learning_rate*100), (self.discount_rate*100)])
+            stat_writer.writerow([games_played, (wins/200)*100, (self.epsilon*100), (self.learning_rate*100), (self.discount_rate*100)])
 
 '''
     def save_stats(self, is_training, games_trained, games_played, wins):
